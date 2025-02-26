@@ -58,9 +58,9 @@ def get_emb_bm25_merge(emb_ans, bm25_ans, query):
     '''
     将FAISS 和 BM25 的 召回结果 与 query 组合成 prompt
     '''
-    prompt_template = """基于以下已知信息，简洁和专业的来回答用户的问题。
-                        如果无法从中得到答案，必须只能说"无答案"，且不允许说其他任何内容或添加空格。
-                        答案请使用中文。
+    prompt_template = """基于以下已知信息，用中文简洁和专业地来回答用户的问题。
+                        如果 **无法从中得到答案**，必须仅输出 **“无答案”**（不允许任何其他内容）。
+                        请 **先判断相关性**，如果无关，则必须严格输出 **“无答案”**。
                         已知内容为吉利控股集团汽车销售有限公司的吉利用户手册:
                         1: {emb_ans}
                         2: {bm25_ans}
@@ -73,11 +73,11 @@ def get_rerank(emb_ans, query):
     '''
     将 召回结果 与 query 组合成 prompt
     '''
-    prompt_template = """基于以下已知信息，简洁和专业的来回答用户的问题。
-                        如果无法从中得到答案，必须只能说"无答案"，且不允许说其他任何内容或添加空格。
-                        答案请使用中文。
+    prompt_template = """基于以下已知信息，用中文简洁和专业地来回答用户的问题。
+                        如果 **无法从中得到答案**，必须仅输出 **“无答案”**（不允许任何其他内容）。
+                        请 **先判断相关性**，如果无关，则必须严格输出 **“无答案”**。
                         已知内容为吉利控股集团汽车销售有限公司的吉利用户手册:
-                        1: {emb_ans}
+                        {emb_ans}
                         问题:
                         {question}""".format(emb_ans=emb_ans, question=query)
     return prompt_template
@@ -187,10 +187,10 @@ if __name__ == "__main__":
 
             batch_output = llm.infer(batch_input)
 
-            line["answer_1"] = batch_output[0]  # 合并两路召回，得到的answer
-            line["answer_2"] = batch_output[1]  # 只考虑faiss召回，得到的answer
-            line["answer_3"] = batch_output[2]  # 只考虑bm召回，得到的answer
-            line["answer_4"] = batch_output[3]  # 合并两路召回且重排序，得到的answer
+            line["answer_1"] = batch_output[0].strip()  # 合并两路召回，得到的answer
+            line["answer_2"] = batch_output[1].strip()  # 只考虑faiss召回，得到的answer
+            line["answer_3"] = batch_output[2].strip()  # 只考虑bm召回，得到的answer
+            line["answer_4"] = batch_output[3].strip()  # 合并两路召回且重排序，得到的answer
             line["answer_5"] = emb_ans  # faiss召回的文本块
             line["answer_6"] = bm25_ans  # bm召回的文本块
             line["answer_7"] = rerank_ans  # 合并两路召回并重排序得到的文本块
