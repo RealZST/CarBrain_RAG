@@ -7,8 +7,9 @@ import numpy as np
 from text2vec import SentenceModel, semantic_search
 
 
-simModel_path = './pre_train_model/text2vec-base-chinese'  # 相似度模型路径
-simModel = SentenceModel(model_name_or_path=simModel_path, device='cuda:0')
+# simModel_path = './pre_train_model/text2vec-base-chinese'  # 相似度模型
+model_name = "shibing624/text2vec-base-chinese"
+simModel = SentenceModel(model_name_or_path=model_name, device='cuda:0')
 
 
 def calc_jaccard(list_a, list_b, threshold=0.3):

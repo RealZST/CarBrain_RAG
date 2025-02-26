@@ -50,7 +50,7 @@ class FaissRetriever(object):
 
 if __name__ == "__main__":
     base = "."
-    model_name = base + "/pre_train_model/m3e-large"
+    # model_name = base + "/pre_train_model/m3e-large"
     dp = DataProcess(pdf_path=base + "/data/train_a.pdf")
     dp.ParseBlock(max_seq=1024)
     dp.ParseBlock(max_seq=512)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     print(len(dp.data))
     data = dp.data
 
-    faissretriever = FaissRetriever(model_name, data)
+    faissretriever = FaissRetriever("moka-ai/m3e-large", data)
 
     faiss_ans = faissretriever.GetTopK("如何预防新冠肺炎", 6)
     print(faiss_ans)

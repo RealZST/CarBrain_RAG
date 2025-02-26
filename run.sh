@@ -6,7 +6,7 @@
 # SBATCH --partition=gpu-p100-16g
 #SBATCH --mem=50G
 #SBATCH --gres=gpu:1
-#SBATCH --constraint="a100|h100"
+#SBATCH --constraint="a100"
 
 # module load cuda
 # module load gcc

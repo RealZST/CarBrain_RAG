@@ -46,10 +46,10 @@ class reRankLLM(object):
         '''
         pairs = [(query, doc.page_content) for doc in docs]
         inputs = self.tokenizer(
-            pairs, 
+            pairs,
             padding=True,  # 批量输入（batch）时，要保证所有句子等长
             truncation=True,  # 如果 query + doc 过长，截断到 max_length=512
-            return_tensors='pt', 
+            return_tensors='pt',
             max_length=self.max_length
         ).to("cuda")
         # 计算相关性得分
@@ -60,10 +60,11 @@ class reRankLLM(object):
         response = [doc for score, doc in sorted(zip(scores, docs), reverse=True, key=lambda x:x[0])]
         # 释放显存
         torch_gc()
-        
+
         return response
 
 
 if __name__ == "__main__":
-    bge_reranker_large = "./pre_train_model/bge-reranker-large"
+    # bge_reranker_large = "./pre_train_model/bge-reranker-large"
+    bge_reranker_large = "BAAI/bge-reranker-large"
     rerank = reRankLLM(bge_reranker_large)

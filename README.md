@@ -35,7 +35,7 @@ python download.py
 sbatch run.sh
 ```
 
-结果被存在了./data/result.json中
+结果保存在./data/result.json中
 
 evaluate结果：
 

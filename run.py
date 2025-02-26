@@ -9,8 +9,7 @@ import json
 # from langchain.schema import Document
 # from langchain.vectorstores import Chroma, FAISS
 # from langchain import PromptTemplate, LLMChain
-from langchain import PromptTemplate
-from langchain.chains import RetrievalQA
+# from langchain.chains import RetrievalQA
 import time
 # import re
 
@@ -104,11 +103,14 @@ if __name__ == "__main__":
 
     base = "."
     # LLM model
-    qwen7 = base + "/pre_train_model/Qwen-7B-Chat/qwen/Qwen-7B-Chat"
+    # qwen7 = base + "/pre_train_model/Qwen-7B-Chat/qwen/Qwen-7B-Chat"
+    qwen7 = "Qwen/Qwen-7B-Chat"
     # embedding model
-    m3e = base + "/pre_train_model/m3e-large"
+    # m3e = base + "/pre_train_model/m3e-large"
+    m3e = "moka-ai/m3e-large"
     # rerank model
-    bge_reranker_large = base + "/pre_train_model/bge-reranker-large"
+    # bge_reranker_large = base + "/pre_train_model/bge-reranker-large"
+    bge_reranker_large = "BAAI/bge-reranker-large"
 
     # 解析pdf文档，按照不同的规则切分文本
     dp = DataProcess(pdf_path=base + "/data/train_a.pdf")

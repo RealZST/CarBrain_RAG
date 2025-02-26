@@ -121,7 +121,8 @@ class ChatLLM(object):
 
 
 if __name__ == "__main__":
-    qwen7 = "./pre_train_model/Qwen-7B-Chat/qwen/Qwen-7B-Chat"
+    # qwen7 = "./pre_train_model/Qwen-7B-Chat/qwen/Qwen-7B-Chat"
+    qwen7 = "Qwen/Qwen-7B-Chat"
     start = time.time()
     llm = ChatLLM(qwen7)
     test = ["吉利汽车座椅按摩", "吉利汽车语音组手唤醒", "自动驾驶功能介绍"]
