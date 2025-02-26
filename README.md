@@ -20,13 +20,6 @@ module load gcc
 pip install -r requirements.txt
 ```
 
-下载qwen
-
-```
-cd ./pre_train_model/Qwen-7B-Chat/
-python download.py
-```
-
 ## Get started
 
 运行run.sh
