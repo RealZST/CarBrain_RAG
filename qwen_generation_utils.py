@@ -3,7 +3,8 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""阿里千问模型的工具函数，来源于官网"""
+"""Utility functions for Alibaba Qwen model, sourced from the official website"""
+
 
 from typing import Tuple, List, Union, Iterable
 

@@ -2,8 +2,8 @@
 # coding: utf-8
 
 """
-创建 bm25 retriever
-对 query 进行分词，获取相似度最高的 k 个文本块
+Create BM25 retriever
+Tokenize the query and retrieve the top k most similar text blocks
 """
 
 from langchain.retrievers import BM25Retriever
@@ -13,45 +13,48 @@ import jieba
 
 
 class BM25(object):
-    # 传入被切分好的文本块列表，遍历文本块列表，首先做分词，然后把分词后的文档和全文文档建立索引和映射关系
+    # Pass in a list of pre-segmented text blocks, iterate through the list,
+    # perform tokenization, and establish an index and mapping relationship 
+    # between tokenized documents and full-text documents
     def __init__(self, documents):
         docs = []
         full_docs = []
         for idx, line in enumerate(documents):
             line = line.strip()
-            # 如果 line 过短（少于 5 个字符），则跳过
+            # Skip if the line is too short (less than 5 characters)
             if len(line) < 5:
                 continue
-            # 对line 进行中文分词，将分词结果用 " " 连接成字符串
+            # Perform Chinese word segmentation on the line
+            # and join the segmented words with a space
             tokens = " ".join(jieba.cut_for_search(line))
-            # 存储 分词后的文本和文档 ID
+            # Store the tokenized text and document ID
             docs.append(Document(page_content=tokens, metadata={"id": idx}))
             words = line.split("\t")
-            # 存储 原始文本和文档 ID
+            # Store the original text (full-text) and document ID
             full_docs.append(Document(page_content=words[0], metadata={"id": idx}))
-        # BM25 计算相似度时需要分词后的文本
+        # BM25 requires tokenized text to calculate similarity
         self.documents = docs
-        # 返回文档时需要原始文本
+        # The original text (full-text) is needed when returning documents
         self.full_documents = full_docs
         self.retriever = self._init_bm25()
 
-    # 初始化BM25 retriever
+    # Initialize BM25 retriever
     def _init_bm25(self):
         return BM25Retriever.from_documents(self.documents)
 
-    # 获得得分在top k的文档和分数
+    # Get the top k documents based on BM25 scores
     def GetBM25TopK(self, query, k):
         self.retriever.k = k
-        # 对 query 进行分词
+        # Tokenize the query
         query = " ".join(jieba.cut_for_search(query))
-        # 获取相似文档(BM25 不显示提供score)
+        # Retrieve similar documents (BM25 does not explicitly provide scores)
         ans_docs = self.retriever.get_relevant_documents(query)
-        # 索引原始文本并返回
+        # Map back to the original text and return
         ans = []
         for line in ans_docs:
             ans.append(self.full_documents[line.metadata["id"]])
-        # ans 是list[Document]
-        return ans
+
+        return ans  # list[Document]
 
 
 if __name__ == "__main__":

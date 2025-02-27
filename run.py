@@ -2,17 +2,9 @@
 # coding: utf-8
 
 import json
-# import jieba
-# import pandas as pd
-# import numpy as np
-# from tqdm import tqdm
-# from langchain.schema import Document
-# from langchain.vectorstores import Chroma, FAISS
-# from langchain import PromptTemplate, LLMChain
+# from langchain import PromptTemplate
 # from langchain.chains import RetrievalQA
 import time
-# import re
-
 from vllm_model import ChatLLM
 from rerank_model import reRankLLM
 from faiss_retriever import FaissRetriever
@@ -20,44 +12,40 @@ from bm25_retriever import BM25
 from pdf_parse import DataProcess
 
 
-# # 获取Langchain的工具链
 # def get_qa_chain(llm, vector_store, prompt_template):
 #     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 #     return RetrievalQA.from_llm(llm=llm, retriever=vector_store.as_retriever(search_kwargs={"k": 10}), prompt=prompt)
 
-
+# Limit the number of retrieved text blocks and their total length
 def limit_retrieved_emb_docs(context, top_k=6, max_length=2500):
-    '''限制召回的文本块的个数和总长度'''
     emb_ans = ""
     cnt = 0
     for doc, score in context:
         cnt = cnt + 1
-        if len(emb_ans + doc.page_content) > max_length:  # 限制召回结果的文本长度
+        if len(emb_ans + doc.page_content) > max_length:  # Restrict the total length of retrieved results
             break
         emb_ans = emb_ans + doc.page_content
-        if cnt > top_k:  # 只选前top_k个召回结果
+        if cnt > top_k:  # Select only the top_k retrieved results
             break
     return emb_ans  # str
 
 
+# Limit the number of retrieved text blocks and their total length
 def limit_retrieved_docs(context, top_k=6, max_length=2500):
-    '''限制召回的文本块的个数和总长度'''
     ans = ""
     cnt = 0
     for doc in context:
         cnt = cnt + 1
-        if len(ans + doc.page_content) > max_length:  # 限制召回结果的文本长度
+        if len(ans + doc.page_content) > max_length:  # Restrict the total length of retrieved results
             break
         ans = ans + doc.page_content
-        if cnt > top_k:  # 只选前top_k个召回结果
+        if cnt > top_k:  # Select only the top_k retrieved results
             break
     return ans  # str
 
 
+# Merge FAISS and BM25 retrieval results with the query into a prompt
 def get_emb_bm25_merge(emb_ans, bm25_ans, query):
-    '''
-    将FAISS 和 BM25 的 召回结果 与 query 组合成 prompt
-    '''
     prompt_template = """基于以下已知信息，用中文简洁和专业地来回答用户的问题。
                         如果 **无法从中得到答案**，必须仅输出 **“无答案”**（不允许任何其他内容）。
                         请 **先判断相关性**，如果无关，则必须严格输出 **“无答案”**。
@@ -69,10 +57,8 @@ def get_emb_bm25_merge(emb_ans, bm25_ans, query):
     return prompt_template
 
 
+# Merge retrieved results with the query into a prompt
 def get_rerank(emb_ans, query):
-    '''
-    将 召回结果 与 query 组合成 prompt
-    '''
     prompt_template = """基于以下已知信息，用中文简洁和专业地来回答用户的问题。
                         如果 **无法从中得到答案**，必须仅输出 **“无答案”**（不允许任何其他内容）。
                         请 **先判断相关性**，如果无关，则必须严格输出 **“无答案”**。
@@ -103,19 +89,17 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    base = "."
     # LLM model
-    # qwen7 = base + "/pre_train_model/Qwen-7B-Chat/qwen/Qwen-7B-Chat"
     qwen7 = "Qwen/Qwen-7B-Chat"
+
     # embedding model
-    # m3e = base + "/pre_train_model/m3e-large"
     m3e = "moka-ai/m3e-large"
+
     # rerank model
-    # bge_reranker_large = base + "/pre_train_model/bge-reranker-large"
     bge_reranker_large = "BAAI/bge-reranker-large"
 
-    # 解析pdf文档，按照不同的规则切分文本
-    dp = DataProcess(pdf_path=base + "/data/train_a.pdf")
+    # Parse the PDF document and segment text using different rules
+    dp = DataProcess(pdf_path="./data/train_a.pdf")
     dp.ParseBlock(max_seq=1024)
     dp.ParseBlock(max_seq=512)
     print(len(dp.data))
@@ -125,83 +109,78 @@ if __name__ == "__main__":
     dp.ParseOnePageWithRule(max_seq=256)
     dp.ParseOnePageWithRule(max_seq=512)
     print(len(dp.data))
-    # 将这6种切分结果（3种切分方法，每种方法分别设置2个max_seq值）全部存在data中
+    # Store all six segmentation results in data (3 segmentation methods, each with 2 max_seq values) 
     data = dp.data
     print("data load ok")
 
-    # 加载Faiss retriever
+    # Load FAISS retriever
     faissretriever = FaissRetriever(m3e, data)
     vector_store = faissretriever.vector_store
     print("faissretriever load ok")
 
-    # 加载BM25 retriever
+    # Load BM25 retriever
     bm25 = BM25(data)
     print("bm25 load ok")
 
-    # 加载LLM大模型
+    # Load LLM model
     llm = ChatLLM(qwen7)
     print("llm qwen load ok")
 
-    # 加载reRank模型
+    # Load reRank model
     rerank = reRankLLM(bge_reranker_large)
     print("rerank model load ok")
 
-    # 对测试数据中的每一个问题，生成回答
-    with open(base + "/data/test_question.json", "r") as f:
+    # Generate answers for each question in the test dataset
+    with open("./data/test_question.json", "r") as f:
         jdata = json.loads(f.read())
         print(f"Loads {len(jdata)} test questions。")
 
         for idx, line in enumerate(jdata):
             query = line["question"]
 
-            # faiss召回相似文本块
+            # Retrieve similar docs using FAISS
             faiss_context = faissretriever.GetTopK(query, k=15)
             faiss_min_score = 0.0
             if (len(faiss_context) > 0):
                 faiss_min_score = faiss_context[0][1]
             emb_ans = limit_retrieved_emb_docs(faiss_context)
 
-            # bm25召回相似文本块
+            # Retrieve similar docs using BM25
             bm25_context = bm25.GetBM25TopK(query, k=15)
             bm25_ans = limit_retrieved_docs(bm25_context)
 
-            # 将FAISS 和 BM25 的 召回结果 与 query 组合成 prompt
+            # Merge FAISS and BM25 retrieval results with the query into a prompt
             emb_bm25_merge_inputs = get_emb_bm25_merge(emb_ans, bm25_ans, query)
 
-            # 将faiss召回结果 与 query 组合成 prompt
+            # Merge FAISS retrieval results with the query into a prompt
             emb_inputs = get_rerank(emb_ans, query)
 
-            # 将bm25召回结果 与 query 组合成 prompt
+            # Merge BM25 retrieval results with the query into a prompt
             bm25_inputs = get_rerank(bm25_ans, query)
 
-            # 将FAISS和BM25的召回结果按照与query的相关性得分排序
+            # Re-rank the FAISS and BM25 retrieval results based on relevance scores
             rerank_ans = reRank(rerank, query, faiss_context, bm25_context, top_k=6, max_length=4000)
-            # 将rerank后的召回结果与 query 组合成 prompt
+            # Merge re-ranked retrieval results with the query into a prompt
             rerank_inputs = get_rerank(rerank_ans, query)
 
-            batch_input = []
-            batch_input.append(emb_bm25_merge_inputs)
-            batch_input.append(emb_inputs)
-            batch_input.append(bm25_inputs)
-            batch_input.append(rerank_inputs)
-
+            batch_input = [emb_bm25_merge_inputs, emb_inputs, bm25_inputs, rerank_inputs]
             batch_output = llm.infer(batch_input)
 
-            line["answer_1"] = batch_output[0].strip()  # 合并两路召回，得到的answer
-            line["answer_2"] = batch_output[1].strip()  # 只考虑faiss召回，得到的answer
-            line["answer_3"] = batch_output[2].strip()  # 只考虑bm召回，得到的answer
-            line["answer_4"] = batch_output[3].strip()  # 合并两路召回且重排序，得到的answer
-            line["answer_5"] = emb_ans  # faiss召回的文本块
-            line["answer_6"] = bm25_ans  # bm召回的文本块
-            line["answer_7"] = rerank_ans  # 合并两路召回并重排序得到的文本块
+            line["answer_1"] = batch_output[0].strip()  # Answer considering both FAISS and BM25 retrieval
+            line["answer_2"] = batch_output[1].strip()  # Answer considering only FAISS retrieval
+            line["answer_3"] = batch_output[2].strip()  # Answer considering only BM25 retrieval
+            line["answer_4"] = batch_output[3].strip()  # Answer considering both retrieval methods and re-ranking
+            line["answer_5"] = emb_ans  # FAISS retrieved text blocks
+            line["answer_6"] = bm25_ans  # BM25 retrieved text blocks
+            line["answer_7"] = rerank_ans  # Merged and re-ranked retrieval text blocks
 
-            # 如果faiss检索跟query的距离高于500，输出‘无相关文本’
+            # If FAISS retrieval distance is greater than 500, output 'No relevant text'
             if faiss_min_score > 500:
                 line["answer_5"] = "无相关文本"
             else:
                 line["answer_5"] = str(faiss_min_score) + emb_ans
 
-        # 保存结果
-        json.dump(jdata, open(base + "/data/result.json", "w", encoding='utf-8'), ensure_ascii=False, indent=2)
+        # Save the results
+        json.dump(jdata, open("./data/result.json", "w", encoding='utf-8'), ensure_ascii=False, indent=2)
         end = time.time()
         print("cost time: " + str(int(end-start)/60))

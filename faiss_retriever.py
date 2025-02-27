@@ -2,8 +2,8 @@
 # coding: utf-8
 
 """
-创建FAISS vectordb
-对 query 进行向量化，获取相似度最高的 k 个文本块
+Create FAISS vector database
+Embed the query and retrieve the top k most similar text blocks
 """
 
 from langchain.schema import Document
@@ -14,14 +14,14 @@ import torch
 
 
 class FaissRetriever(object):
-    # 创建FAISS vectordb
-    # 传入embedding model路径，和被切分好的文本块列表
+    # Create FAISS vector database
+    # Pass in the embedding model path and the list of pre-segmented text blocks
     def __init__(self, model_path, data):
         self.embeddings = HuggingFaceEmbeddings(
-                               model_name=model_path,
-                               model_kwargs={"device": "cuda"},
-                               encode_kwargs={"batch_size": 64}
-                           )
+            model_name=model_path,
+            model_kwargs={"device": "cuda"},
+            encode_kwargs={"batch_size": 64}
+        )
         docs = []
         for idx, line in enumerate(data):
             line = line.strip()
@@ -29,21 +29,21 @@ class FaissRetriever(object):
             docs.append(Document(page_content=words[0], metadata={"id": idx}))
         self.vector_store = FAISS.from_documents(docs, self.embeddings)
 
-        # # 生成embeddings的时间较长，跑完第一次可以把结果持久化，后面直接load
+        # # Generating embeddings takes a long time; after the first run,
+        # # you can persist the results and load them directly later
         # self.vector_store.save_local("./faiss_index")
         # self.vector_store = FAISS.load_local("./faiss_index", self.embeddings, allow_dangerous_deserialization=True)
 
-        # 清理 GPU 显存
+        # Clear GPU memory
         del self.embeddings
         torch.cuda.empty_cache()
 
-    # 对 query 进行向量化，获取相似度最高的 k 个文本块
+    # Embed the query and retrieve the top k most similar text blocks
     def GetTopK(self, query, k):
         context = self.vector_store.similarity_search_with_score(query, k=k)
-        # context 是list[(Document, score)]
-        return context
+        return context  # list[(Document, score)]
 
-    # 返回 FAISS 向量数据库
+    # Return the FAISS vector database
     def GetvectorStore(self):
         return self.vector_store
 

@@ -1,13 +1,12 @@
 """
-接收faiss和bm25检索得到的文本块，计算与query的相关性scores，按 scores 降序排列文本块并返回。
+Receive text blocks retrieved from FAISS and BM25,
+calculate their relevance scores with the query, 
+sort the text blocks in descending order based on scores, and return them.
 """
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import os
 import torch
-
-# from bm25_retriever import BM25
-# from pdf_parse import DataProcess
 from config import *
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -17,54 +16,52 @@ DEVICE_ID = "0"
 CUDA_DEVICE = f"{DEVICE}:{DEVICE_ID}" if DEVICE_ID else DEVICE
 
 
-# 释放gpu上没有用到的显存以及显存碎片
+# Release unused GPU memory and reduce memory fragmentation
 def torch_gc():
     if torch.cuda.is_available():
         with torch.cuda.device(CUDA_DEVICE):
-            # 释放未被占用但仍然缓存的 GPU 显存
+            # Release GPU memory that is cached but not actively used
             torch.cuda.empty_cache()
-            # 清理 CUDA IPC（进程间通信）对象，减少显存碎片
+            # Clean up CUDA IPC objects to reduce memory fragmentation
             torch.cuda.ipc_collect()
 
 
-# 加载rerank模型
+# Creat the rerank model
 class reRankLLM(object):
     def __init__(self, model_path, max_length=512):
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
         self.model.eval()
-        self.model.half()  # 使用 FP16降低显存占用
-        # self.model.cuda()
+        self.model.half()  # FP16
         self.model.to(CUDA_DEVICE)
-        self.max_length = max_length  # 最长输入序列长度
+        self.max_length = max_length  # Maximum input sequence length
 
     def predict(self, query, docs):
         '''
-        输入 query 和 docs（候选文档列表）
-        计算 (query, doc) 相关性得分
-        按分数降序排序，返回最相关的文档
+        Input: query and docs (a list of retrieved documents)
+        Compute relevance scores for (query, doc) pairs
+        Sort the documents in descending order based on scores and return the most relevant ones
         '''
         pairs = [(query, doc.page_content) for doc in docs]
         inputs = self.tokenizer(
             pairs,
-            padding=True,  # 批量输入（batch）时，要保证所有句子等长
-            truncation=True,  # 如果 query + doc 过长，截断到 max_length=512
+            padding=True,  # Ensure all sentences are of equal length in batch processing
+            truncation=True,  # Truncate if query + doc exceeds max_length
             return_tensors='pt',
             max_length=self.max_length
         ).to("cuda")
-        # 计算相关性得分
+        # Compute relevance scores
         with torch.no_grad():
             scores = self.model(**inputs).logits
         scores = scores.detach().cpu().clone().numpy()
-        # 按 scores 降序排列 docs
+        # Sort docs in descending order based on scores
         response = [doc for score, doc in sorted(zip(scores, docs), reverse=True, key=lambda x:x[0])]
-        # 释放显存
+        # Release GPU memory
         torch_gc()
 
         return response
 
 
 if __name__ == "__main__":
-    # bge_reranker_large = "./pre_train_model/bge-reranker-large"
     bge_reranker_large = "BAAI/bge-reranker-large"
     rerank = reRankLLM(bge_reranker_large)

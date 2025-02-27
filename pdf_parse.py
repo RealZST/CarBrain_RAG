@@ -2,11 +2,13 @@
 # coding: utf-8
 
 """
-解析 PDF 文件，并按规则对文本进行分块。
-实现了3种分块方法：
-- ParseBlock()：按页解析 PDF 内容，并按照一定规则分块（1）遇到一些具体字样/符号；（2）文本字体大小变化
-- ParseOnePageWithRule()：按页解析 PDF 内容，按句号和max_seq划分文本
-- ParseAllPage()：将整个 PDF 看作一个整体，然后使用滑动窗口进行分块
+Parse PDF files and segment text based on predefined rules.
+Implements three segmentation methods:
+- ParseBlock(): Parses PDF content page by page and segments text based on: 
+(1) specific symbols;
+(2) changes in font size.
+- ParseOnePageWithRule(): Parses PDF content page by page and segments text based on sentence-ending periods and max_seq length.
+- ParseAllPage(): Treats the entire PDF as a single text unit and segments it using a sliding window.
 """
 
 import pdfplumber
@@ -19,13 +21,14 @@ class DataProcess(object):
         self.pdf_path = pdf_path
         self.data = []
 
-    #  数据过滤，拆分长文本并过滤无用字符，然后将拆分后的文本存入self.data
+    # Data filtering: Splits long text, removes unnecessary characters,
+    # and stores the processed text in self.data
     def Datafilter(self, line, header, pageid, max_seq=1024):
         sz = len(line)
-        if sz < 6:  # 去掉短句（长度 < 6 的句子被丢弃）
+        if sz < 6:  # Discard short sentences (length < 6)
             return
 
-        if sz > max_seq:  # 拆分长文本，按以下符号进行分割
+        if sz > max_seq:  # Split long text using the following symbols
             if "■" in line:
                 sentences = line.split("■")
             elif "•" in line:
@@ -36,17 +39,16 @@ class DataProcess(object):
                 sentences = line.split("。")
 
             for subsentence in sentences:
-                # subsentence = subsentence.replace("\n", "")
                 if 5 <= len(subsentence) <= max_seq:
-                    # 过滤无用字符
+                    # Remove unnecessary characters
                     subsentence = subsentence.replace(",", "").replace("\n", "").replace("\t", "")
-                    # 存入 self.data
+                    # Store in self.data
                     if subsentence not in self.data:
                         self.data.append(subsentence)
         else:
-            # 过滤无用字符
+            # Remove unnecessary characters
             line = line.replace("\n", "").replace(",", "").replace("\t", "")
-            # 存入 self.data
+            # Store in self.data
             if (line not in self.data):
                 self.data.append(line)
 
@@ -57,58 +59,59 @@ class DataProcess(object):
         except:
             return None
         if len(lines) > 0:
-            for line in lines:  # 每个line是一个单词的字典（dict），包含该单词的位置信息
+            for line in lines:  # Each line is a dictionary
                 if ("目录" in line["text"] or ".........." in line["text"]):
-                    # 排除目录页
+                    # Exclude table of contents pages
                     return None
-                # 一级标题
+                # Primary title
                 if 17 < line["top"] < 20:
                     return line["text"]
-            # 如果没有找到符合条件的标题，返回页面的第一个单词
+            # If no title is found, return the first word on the page
             return lines[0]["text"]
-        # 空白页
+        # Blank page
         return None
 
-    # 按页解析 PDF 内容，按以下规则分块：（1）遇到一些具体字样/符号；（2）文本字体大小变化
+    # Parse PDF content page by page and segment text based on:
+    # (1) specific symbols; (2) changes in font size.
     def ParseBlock(self, max_seq=1024):
         with pdfplumber.open(self.pdf_path) as pdf:
-            # 逐页遍历 PDF 内容
+            # Iterate through each page in the PDF
             for i, p in enumerate(pdf.pages):
-                # 返回一级标题或页面的第一个单词
+                # Get primary title or first word on the page
                 header = self.GetHeader(p)
-                # 排除目录页和空白页
+                # Exclude table of contents and blank pages
                 if header is None:
                     continue
 
-                # ’p‘这页不是目录页或空白页
-                # 按照文本流方式组合文本，保持自然阅读顺序
-                # 提取文本的字体大小信息，用于后续段落识别
+                # 'p' is neither a table of contents page nor a blank page
+                # Extract text in a natural reading order
+                # Extract font size information for paragraph identification
                 texts = p.extract_words(use_text_flow=True, extra_attrs=["size"])[::]
 
-                squence = ""  # 用于存储当前段落的文本内容
-                lastsize = 0  # 记录上一个text的字体大小，方便判断是否换段
+                squence = ""  # Stores the current paragraph content
+                lastsize = 0  # Stores the font size of the previous text for paragraph identification
                 for idx, line in enumerate(texts):
-                    # 跳过第1段text
+                    # Skip the first segment
                     if idx < 1:
                         continue
-                    # 如果第2段是纯数字，也跳过
+                    # Skip if the second segment is purely digital
                     if idx == 1:
                         if line["text"].isdigit():
                             continue
-                    
-                    cursize = line["size"]  # 当前text的字体大小
+
+                    cursize = line["size"]  # Current text font size
                     text = line["text"]
-                    # 跳过特殊符号
+                    # Skip special symbols
                     if (text == "□" or text == "•"):
                         continue
-                    # 遇到下面这些字样时，认为是新的段落
+                    # If encountering these keywords, start a new paragraph
                     elif (text == "警告！" or text == "注意！" or text == "说明！"):
                         if len(squence) > 0:
-                            # 将当前 squence 传给 Datafilter() 进行存储
+                            # Store the current sequence
                             self.Datafilter(squence, header, i, max_seq=max_seq)
-                        # 清空 squence 以开始新段落
+                        # Start a new paragraph
                         squence = ""
-                    # 若当前文本的字体大小没有变化，则属于同一段落，因此 拼接 squence
+                    # If the font size remains the same, append to the same paragraph
                     elif (format(lastsize, ".5f") == format(cursize, ".5f")):
                         if len(squence) > 0:
                             squence = squence + text
@@ -116,27 +119,27 @@ class DataProcess(object):
                             squence = text
                     else:
                         lastsize = cursize
-                        # 如果 squence 长度较短（小于 15），则继续拼接
+                        # If squence length is short (<15), continue appending
                         if 0 < len(squence) < 15:
                             squence = squence + text
                         else:
-                            # 如果 squence 长度大于 15，则传给 Datafilter() 进行存储
+                            # If squence length is >15, store it
                             if len(squence) > 0:
                                 self.Datafilter(squence, header, i, max_seq=max_seq)
                             squence = text
-                # 处理最后的squence
+                # Process the last squence
                 if len(squence) > 0:
                     self.Datafilter(squence, header, i, max_seq=max_seq)
 
-    # 按页解析 PDF 内容，按句号和max_seq划分文档
+    # Parse PDF content page by page, segment text based on periods and max_seq
     def ParseOnePageWithRule(self, max_seq=512, min_len=6):
-        # 逐页解析 PDF
+        # Iterate through each page in the PDF
         for idx, page in enumerate(PdfReader(self.pdf_path).pages):
             page_content = ""
             text = page.extract_text()
             words = text.split("\n")
             for idx, word in enumerate(words):
-                # 去掉两端空格、\t、\n
+                # Remove leading and trailing spaces, tabs, and newline characters
                 text = word.strip()
                 if ("...................." in text or "目录" in text):
                     continue
@@ -144,17 +147,18 @@ class DataProcess(object):
                     continue
                 if text.isdigit():
                     continue
-                # 按照上面的规则过滤完后，将这页的文本再拼回到一起，page_content代表整页文本
+                # After filtering based on the above rules, concatenate the text of the page.
+                # `page_content` represents the full text of the current page.
                 page_content = page_content + text
-            
-            # 若整页文本过短，则跳过
+
+            # Skip the page if the total text is too short
             if len(page_content) < min_len:
                 continue
-            # 如果整页文本长度小于 max_seq，则直接存入 self.data。
+            # If the total page text length is less than max_seq, store it directly in self.data
             if len(page_content) < max_seq:
                 if page_content not in self.data:
                     self.data.append(page_content)
-            # 如果整页文本长度大于等于 max_seq，则按句号切分
+            # If the total page text length is greater than or equal to max_seq, split it by periods
             else:
                 sentences = page_content.split("。")
                 cur = ""
@@ -162,17 +166,14 @@ class DataProcess(object):
                     if len(cur + sentence) >= max_seq:
                         if (cur + sentence) not in self.data:
                             self.data.append(cur + sentence)
-                        # cur = sentence
                         cur = ""
                     else:
                         cur = cur + sentence
 
-    # 滑动窗口功能实现
     def SlidingWindow(self, sentences, kernel=512, stride=1):
-        # sz = len(sentences)
         cur = ""
-        fast = 0  # 滑动窗口的右边界，遍历 sentences
-        slow = 0  # 滑动窗口的左边界，控制窗口的滑动起点
+        fast = 0  # Right boundary of the sliding window, iterating through sentences
+        slow = 0  # Left boundary controlling window movement
         while (fast < len(sentences)):
             sentence = sentences[fast]
             if len(cur + sentence) >= kernel:
@@ -183,10 +184,10 @@ class DataProcess(object):
             cur = cur + sentence + "。"
             fast = fast + 1
 
-    #  滑窗法提取段落
-    #  1. 把pdf看做一个整体,作为一个字符串
-    #  2. 利用句号当做分隔符,切分成一个数组
-    #  3. 利用滑窗法对数组进行滑动, 当窗口内文本的长度大于max_seq时进行分块
+    # Sliding window-based segmentation
+    # 1. Treat the entire PDF as a single text string
+    # 2. Use periods as delimiters to split the text into an array
+    # 3. Slide the window over the array and segment the text when its length exceeds max_seq
     def ParseAllPage(self, max_seq=512, min_len=6):
         all_content = ""
         # 逐页解析 PDF
@@ -195,7 +196,6 @@ class DataProcess(object):
             text = page.extract_text()
             words = text.split("\n")
             for idx, word in enumerate(words):
-                # 去掉两端空格、\t、\n
                 text = word.strip()
                 if ("...................." in text or "目录" in text):
                     continue
@@ -203,41 +203,43 @@ class DataProcess(object):
                     continue
                 if text.isdigit():
                     continue
-                # 按照上面的规则过滤完后，将这页的文本再拼回到一起，page_content代表整页文本
+                # After filtering based on the above rules, concatenate the text of the page.
+                # `page_content` represents the full text of the current page.
                 page_content = page_content + text
-            
-            # 若整页文本过短，则跳过
+
+            # Skip the page if the total text is too short
             if len(page_content) < min_len:
                 continue
-            
-            # 拼接每页文本，all_content代表整个pdf文件的所有文本
+
+            # Concatenate the text from each page
+            # 'all_content' represents the entire text of the PDF file
             all_content = all_content + page_content
-        
-        # 按句号切分文本
+
+        # Use periods as delimiters to split the text
         sentences = all_content.split("。")
-        
+
         self.SlidingWindow(sentences, kernel=max_seq)
 
 
 if __name__ == "__main__":
     dp = DataProcess(pdf_path="./data/train_a.pdf")
-    
+
     dp.ParseBlock(max_seq=1024)
     dp.ParseBlock(max_seq=512)
     print(len(dp.data))
-    
+
     dp.ParseAllPage(max_seq=256)
     dp.ParseAllPage(max_seq=512)
     print(len(dp.data))
-    
+
     dp.ParseOnePageWithRule(max_seq=256)
     dp.ParseOnePageWithRule(max_seq=512)
     print(len(dp.data))
-    
+
     data = dp.data
     out = open("all_text.txt", "w")
     for line in data:
-        line = line.strip("\n")  # 去除 line 两端的换行符 \n
+        line = line.strip("\n")
         out.write(line)
         out.write("\n")
     out.close()
