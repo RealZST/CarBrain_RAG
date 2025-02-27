@@ -1,7 +1,7 @@
 """
-Receive text blocks retrieved from FAISS and BM25,
-calculate their relevance scores with the query, 
-sort the text blocks in descending order based on scores, and return them.
+Receive text chunks retrieved from FAISS and BM25,
+calculate their relevance scores with the query,
+sort the text chunks in descending order based on scores, and return them.
 """
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer

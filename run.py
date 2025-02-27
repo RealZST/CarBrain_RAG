@@ -16,7 +16,7 @@ from pdf_parse import DataProcess
 #     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 #     return RetrievalQA.from_llm(llm=llm, retriever=vector_store.as_retriever(search_kwargs={"k": 10}), prompt=prompt)
 
-# Limit the number of retrieved text blocks and their total length
+# Limit the number of retrieved text chunks and their total length
 def limit_retrieved_emb_docs(context, top_k=6, max_length=2500):
     emb_ans = ""
     cnt = 0
@@ -30,7 +30,7 @@ def limit_retrieved_emb_docs(context, top_k=6, max_length=2500):
     return emb_ans  # str
 
 
-# Limit the number of retrieved text blocks and their total length
+# Limit the number of retrieved text chunks and their total length
 def limit_retrieved_docs(context, top_k=6, max_length=2500):
     ans = ""
     cnt = 0
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     # Load FAISS retriever
     faissretriever = FaissRetriever(m3e, data)
     vector_store = faissretriever.vector_store
-    print("faissretriever load ok")
+    print("faiss retriever load ok")
 
     # Load BM25 retriever
     bm25 = BM25(data)
@@ -138,14 +138,14 @@ if __name__ == "__main__":
         for idx, line in enumerate(jdata):
             query = line["question"]
 
-            # Retrieve similar docs using FAISS
+            # Retrieve relevant docs using FAISS
             faiss_context = faissretriever.GetTopK(query, k=15)
             faiss_min_score = 0.0
             if (len(faiss_context) > 0):
                 faiss_min_score = faiss_context[0][1]
             emb_ans = limit_retrieved_emb_docs(faiss_context)
 
-            # Retrieve similar docs using BM25
+            # Retrieve relevant docs using BM25
             bm25_context = bm25.GetBM25TopK(query, k=15)
             bm25_ans = limit_retrieved_docs(bm25_context)
 
@@ -170,9 +170,9 @@ if __name__ == "__main__":
             line["answer_2"] = batch_output[1].strip()  # Answer considering only FAISS retrieval
             line["answer_3"] = batch_output[2].strip()  # Answer considering only BM25 retrieval
             line["answer_4"] = batch_output[3].strip()  # Answer considering both retrieval methods and re-ranking
-            line["answer_5"] = emb_ans  # FAISS retrieved text blocks
-            line["answer_6"] = bm25_ans  # BM25 retrieved text blocks
-            line["answer_7"] = rerank_ans  # Merged and re-ranked retrieval text blocks
+            line["answer_5"] = emb_ans  # FAISS retrieved text chunks
+            line["answer_6"] = bm25_ans  # BM25 retrieved text chunks
+            line["answer_7"] = rerank_ans  # Merged and re-ranked retrieval text chunks
 
             # If FAISS retrieval distance is greater than 500, output 'No relevant text'
             if faiss_min_score > 500:

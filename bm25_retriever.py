@@ -3,7 +3,7 @@
 
 """
 Create BM25 retriever
-Tokenize the query and retrieve the top k most similar text blocks
+Tokenize the query and retrieve the top k most similar text chunks
 """
 
 from langchain.retrievers import BM25Retriever
@@ -13,8 +13,8 @@ import jieba
 
 
 class BM25(object):
-    # Pass in a list of pre-segmented text blocks, iterate through the list,
-    # perform tokenization, and establish an index and mapping relationship 
+    # Pass in a list of pre-segmented text chunks, iterate through the list,
+    # perform tokenization, and establish an index and mapping relationship
     # between tokenized documents and full-text documents
     def __init__(self, documents):
         docs = []

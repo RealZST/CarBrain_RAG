@@ -3,7 +3,7 @@
 
 """
 Create FAISS vector database
-Embed the query and retrieve the top k most similar text blocks
+Embed the query and retrieve the top k most similar text chunks
 """
 
 from langchain.schema import Document
@@ -15,7 +15,7 @@ import torch
 
 class FaissRetriever(object):
     # Create FAISS vector database
-    # Pass in the embedding model path and the list of pre-segmented text blocks
+    # Pass in the embedding model path and the list of pre-segmented text chunks
     def __init__(self, model_path, data):
         self.embeddings = HuggingFaceEmbeddings(
             model_name=model_path,
@@ -38,7 +38,7 @@ class FaissRetriever(object):
         del self.embeddings
         torch.cuda.empty_cache()
 
-    # Embed the query and retrieve the top k most similar text blocks
+    # Embed the query and retrieve the top k most similar text chunks
     def GetTopK(self, query, k):
         context = self.vector_store.similarity_search_with_score(query, k=k)
         return context  # list[(Document, score)]
