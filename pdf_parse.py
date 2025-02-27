@@ -4,7 +4,7 @@
 """
 Parse PDF files and segment text based on predefined rules.
 Implements three segmentation methods:
-- ParseBlock(): Parses PDF content page by page and segments text based on: 
+- ParseBlock(): Parses PDF content page by page and segments text based on:
 (1) specific symbols;
 (2) changes in font size.
 - ParseOnePageWithRule(): Parses PDF content page by page and segments text based on sentence-ending periods and max_seq length.

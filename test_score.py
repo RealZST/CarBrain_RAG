@@ -1,7 +1,7 @@
 # coding=utf-8
 
 '''
-    Online evaluation
+Online evaluation
 '''
 
 import json
@@ -71,7 +71,7 @@ def report_score(gold_path, predict_path):
 
 if __name__ == "__main__":
     '''
-      Online evaluation
+    Online evaluation
     '''
 
     # Path to reference answers

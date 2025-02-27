@@ -1,20 +1,21 @@
-# CarBrain-RAG
+# Reproduction for [Tianchi-LLM-QA](https://github.com/dawoshi/Tianchi-LLM-QA?tab=readme-ov-file)
+
 ## **Environment setup**
 
-查看cuda版本
+**Check cuda version**
 
 ```
 module avail 2>&1 | grep -i cuda
 ```
 
-把cuda和gcc load进来：
+**Load cuda and gcc**
 
 ```
 module load cuda/12.2.1
 module load gcc
 ```
 
-安装依赖
+**Install dependencies**
 
 ```
 pip install -r requirements.txt
@@ -22,15 +23,15 @@ pip install -r requirements.txt
 
 ## Get started
 
-运行run.sh
+**Run run.sh**
 
 ```
 sbatch run.sh
 ```
 
-结果保存在./data/result.json中
+LLM-generated results are saved in './data/result.json'
 
-evaluate结果：
+**Evaluate the results**
 
 ```
 sbatch test_score.sh
@@ -40,25 +41,20 @@ sbatch test_score.sh
 ## Project Structure
 
 ```
-├── Dockerfile                     # 镜像文件
-├── README.md                      # 说明文档
-├── bm25_retriever.py              # BM25召回
-├── build.sh                       # 镜像编译打包
-├── data                           # 数据目录
-│   ├── result.json                # 结果提交文件
-│   ├── test_question.json         # 测试集
-│   └── train_a.pdf                # 训练集
-├── faiss_retriever.py             # faiss向量召回
-├── vllm_model.py                  # vllm大模型加速wrapper
-├── pdf_parse.py                   # pdf文档解析器
-├── pre_train_model                # 预训练大模型
-│   ├── Qwen-7B-Chat               # Qwen-7B
-│   │   └── download.py
-│   ├── bge-reranker-large         # bge重排序模型
-│   └── m3e-large                  # 向量检索模型
-├── qwen_generation_utils.py       # qwen答案生成的工具函数
-├── requirements.txt               # 此项目的第三方依赖库
-├── rerank_model.py                # 重排序逻辑
-├── run.py                         # 主文件
-└── run.sh                         # 主运行脚本
+├── requirements.txt
+├── config.py
+├── data
+│   ├── result.json                # LLM-generated answers
+│   ├── test_question.json         # test dataset
+│   └── train_a.pdf                # pdf file to be parsed
+├── pdf_parse.py                   # Parse PDF files and segment text following 3 methods.
+├── faiss_retriever.py             # FAISS retriever
+├── bm25_retriever.py              # BM25 retriever
+├── rerank_model.py                # Rerank the retrieved docs based on relevance scores
+├── vllm_model.py                  # vLLM acceleration
+├── qwen_generation_utils.py       # Utility functions for Qwen
+├── run.py                         # Main file
+├── run.sh                         # Main script
+├── test_score.py                  # Online evaluation
+└── test_score.sh                  # Online evaluation script
 ```
