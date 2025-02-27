@@ -20,7 +20,6 @@ module load gcc
 ```
 pip install -r requirements.txt
 ```
----
 ## Get started
 
 **Run run.sh**
@@ -36,8 +35,6 @@ LLM-generated results are saved in './data/result.json'
 ```
 sbatch test_score.sh
 ```
-
----
 
 ## Project Structure
 
@@ -63,3 +60,10 @@ sbatch test_score.sh
 <p align="center">
   <img src="./project.png" width="100%">
 </p>
+
+## **Modifications**
+
+- **Added Environment Setup**: Additional configurations and corrections were made.
+- **Added 'Project Structure'**: Added an overview of all scripts and their relationships.
+- **Code Organization & Documentation**: Cleaned up unnecessary codes and added detailed comments.
+
